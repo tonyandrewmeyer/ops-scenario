@@ -682,7 +682,7 @@ def test_pebble_exec():
         exec_mock={
             ('ls', '-ll'):  # This is the command we're mocking.
                 scenario.Exec(  # This data structure contains all we need to mock the call.
-                    return_code=0,
+                    exit_code=0,
                     stdout=LS_LL
                 )
         }
