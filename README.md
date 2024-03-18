@@ -18,7 +18,7 @@ This puts Scenario tests somewhere in between unit and integration tests: some s
 Scenario tests nudge you into thinking of a charm as an input->output function. The input is the
 union of an `Event` (why am I, charm, being executed), a `State` (am I leader? what is my relation data? what is my
 config?...) and the charm's execution `Context` (what relations can I have? what containers can I have?...). The output is another `State`: the state after the charm has had a chance to interact with the
-mocked juju model and affect the initial state back.
+mocked Juju model and affect the initial state back.
 
 ![state transition model depiction](resources/state-transition-model.png)
 
@@ -29,7 +29,7 @@ Scenario-testing a charm, then, means verifying that:
 - the charm does not raise uncaught exceptions while handling the event
 - the output state (or the diff with the input state) is as expected.
 
-# Core concepts as a metaphor
+## Core concepts as a metaphor
 
 I like metaphors, so here we go:
 
@@ -43,10 +43,10 @@ I like metaphors, so here we go:
 - How the actor will react to the event will have an impact on the context: e.g. the actor might knock over a table (a
   container), or write something down into one of the books.
 
-# Core concepts not as a metaphor
+## Core concepts not as a metaphor
 
 Scenario tests are about running assertions on atomic state transitions treating the charm being tested like a black
-box. An initial state goes in, an event occurs (say, `'start'`) and a new state comes out. Scenario tests are about
+box. An initial state goes in, an event occurs (say, `'start'`), and a new state comes out. Scenario tests are about
 validating the transition, that is, consistency-checking the delta between the two states, and verifying the charm
 author's expectations.
 
@@ -128,7 +128,7 @@ import ops
 def _on_event(self, _event):
     self.unit.status = ops.MaintenanceStatus('determining who the ruler is...')
     try:
-        if self._call_that_takes_a_few_seconds_and_only_passes_on_leadership:
+        if self._call_that_takes_a_few_seconds_and_only_passes_on_leadership():
             self.unit.status = ops.ActiveStatus('I rule')
         else:
             self.unit.status = ops.WaitingStatus('checking this is right...')
@@ -144,7 +144,7 @@ relationship with the `State`.
 
 # Context and State
 
-Consider the following tests. Suppose we want to verify that while handling a given toplevel Juju event:
+Consider the following tests. Suppose we want to verify that while handling a given top level Juju event:
 
 - a specific chain of (custom) events was emitted on the charm
 - the charm `juju-log`ged these specific strings
@@ -178,7 +178,7 @@ def test_statuses():
     ]
     assert state_out.unit_status == ops.ActiveStatus("I am ruled")
     
-    # similarly you can check the app status history:
+    # Similarly you can check the app status history:
     assert ctx.app_status_history == [
         ops.UnknownStatus(),
         ...
@@ -196,7 +196,7 @@ Unknown (the default status every charm is born with), you will have to pass the
 
 ```python
 # ...
-ctx.run('start', scenario.State(unit_status=ops.ActiveStatus('foo')))
+ctx.run(ctx.on.start, scenario.State(unit_status=ops.ActiveStatus('foo')))
 assert ctx.unit_status_history == [
     ops.ActiveStatus('foo'),  # now the first status is active: 'foo'!
     # ...
@@ -264,8 +264,7 @@ def test_emitted_full():
     ]
 ```
 
-
-### Low-level access: using directly `capture_events`
+### Low-level access: directly using `capture_events`
 
 If you need more control over what events are captured (or you're not into pytest), you can use directly the context
 manager that powers the `emitted_events` fixture: `scenario.capture_events`.
@@ -280,7 +279,7 @@ import scenario
 with scenario.capture_events() as emitted:
     ctx = scenario.Context(...)
     state_out = ctx.run(
-        "update-status",
+        ctx.on.update_status,
         scenario.State(deferred=[...])
     )
 
@@ -347,7 +346,7 @@ def test_relation_data():
 
     state_out = ctx.run(ctx.on.start, state_in)
 
-    assert state_out.relations[0].local_unit_data == {"abc": "baz!"}
+    assert state_out.relations['foo'].local_unit_data == {"abc": "baz!"}
     # You can do this to check that there are no other differences:
     assert state_out.relations == {
         "foo": scenario.Relation(
@@ -489,6 +488,8 @@ writing is close to that domain, you should probably override it and pass it man
 import scenario
 
 ctx.run(scenario.Event(ctx.on.foo_relation_changed, remote_unit_id=2), state)
+
+# Similarly:
 ctx.run(scenario.Event(ctx.on.containter1_pebble_custom_notice, notice_key="..."), state)
 ctx.run(scenario.Event(ctx.on.secret_changed, secret_id="..."), state)
 ```
@@ -498,7 +499,7 @@ ctx.run(scenario.Event(ctx.on.secret_changed, secret_id="..."), state)
 Simplifying a bit the Juju "spaces" model, each integration endpoint a charm defines in its metadata is associated with a network. Regardless of whether there is a living relation over that endpoint, that is.  
 
 If your charm has a relation `"foo"` (defined in metadata.yaml or charmcraft.yaml), then the charm will be able at runtime to do `self.model.get_binding("foo").network`.
-The network you'll get by doing so is heavily defaulted (see `state.Network.default`) and good for most use-cases because the charm should typically not be concerned about what IP it gets. 
+The network you'll get by doing so is heavily defaulted (see `state.Network`) and good for most use-cases because the charm should typically not be concerned about what IP it gets. 
 
 On top of the relation-provided network bindings, a charm can also define some `extra-bindings` in its metadata and access them at runtime. Note that this is a deprecated feature that should not be relied upon. For completeness, we support it in Scenario.
 
@@ -507,7 +508,7 @@ If you want to, you can override any of these relation or extra-binding associat
 ```python
 import scenario
 state = scenario.State(networks={
-  'foo': scenario.Network.test_net_1(private_address=ipaddress.ip_address('192.0.2.127'))
+  'foo': scenario.Network(private_address='192.0.2.127')
 })
 ```
 
@@ -519,7 +520,7 @@ When testing a Kubernetes charm, you can mock container interactions. When using
 be no containers. So if the charm were to `self.unit.containers`, it would get back an empty dict.
 
 To give the charm access to some containers, you need to pass them to the input state, like so:
-`State(containers=[...])`
+`State(containers={...})`
 
 An example of a state including some containers:
 
@@ -546,11 +547,10 @@ import scenario
 local_file = pathlib.Path('/path/to/local/real/file.txt')
 
 container = scenario.Container(
-    name="foo",
     can_connect=True,
     mounts={'local': scenario.Mount('/local/share/config.yaml', local_file)}
 )
-state = scenario.State(containers=[container])
+state = scenario.State(containers={'foo': container})
 ```
 
 In this case, if the charm were to:
@@ -586,12 +586,11 @@ class MyCharm(ops.CharmBase):
 def test_pebble_push():
     with tempfile.NamedTemporaryFile() as local_file:
         container = scenario.Container(
-            name='foo',
             can_connect=True,
             mounts={'local': scenario.Mount('/local/share/config.yaml', local_file.name)}
         )
         state_in = scenario.State(
-            containers=[container]
+            containers={'foo': container}
         )
         ctx = scenario.Context(
             MyCharm,
@@ -624,8 +623,8 @@ class MyCharm(ops.CharmBase):
 
 
 def test_pebble_push():
-    container = scenario.Container(name='foo', can_connect=True)
-    state_in = scenario.State(containers=[container])
+    container = scenario.Container(can_connect=True)
+    state_in = scenario.State(containers={'foo': container})
     ctx = scenario.Context(
         MyCharm,
         meta={"name": "foo", "containers": {"foo": {}}}
@@ -643,7 +642,7 @@ def test_pebble_push():
 
 `container.exec` is a tad more complicated, but if you get to this low a level of simulation, you probably will have far
 worse issues to deal with. You need to specify, for each possible command the charm might run on the container, what the
-result of that would be: its return code, what will be written to stdout/stderr.
+result of that would be: its exit code and what will be written to stdout/stderr.
 
 ```python
 import scenario
@@ -679,12 +678,12 @@ class MyCharm(CharmBase):
 
 def test_pebble_exec():
     container = scenario.Container(
-        exec_mock={
-            ('ls', '-ll'):  # This is the command we're mocking.
-                scenario.Exec(  # This data structure contains all we need to mock the call.
-                    return_code=0,
-                    stdout=LS_LL
-                )
+        execs={
+            'll': scenario.Exec(
+                ('ls', '-ll'),  # This is the command we're mocking.
+                return_code=0,
+                stdout=LS_LL
+            )
         }
     )
     state_in = scenario.State(
@@ -722,11 +721,11 @@ import scenario
 
 # Some charm with a 'foo' filesystem-type storage defined in `metadata.yaml` or `charmcraft.yaml`.
 ctx = scenario.Context(MyCharm)
-storage = scenario.Storage("foo")
+storage = scenario.Storage()
 # Setup storage with some content:
 (storage.get_filesystem(0, ctx) / "myfile.txt").write_text("helloworld")
-in_state = scenario.State(storage={
-    storage
+in_state = scenario.State(storages={
+    "foo": storage,
 })
 
 with ctx.run(ctx.on.update_status, in_state) as mgr:
@@ -798,7 +797,7 @@ Since `ops 2.6.0`, charms can invoke the `open-port`, `close-port`, and `opened-
 import scenario
 
 ctx = scenario.Context(MyCharm)
-ctx.run(ctx.on.start, scenario.State(opened_ports=[ops.Port("tcp", 42)]))
+ctx.run(ctx.on.start, scenario.State(opened_ports={ops.Port("tcp", 42)}))
 ```
 
 - Assert that a charm has opened or closed ports:
@@ -808,10 +807,10 @@ import scenario
 
 ctx = scenario.Context(MyCharm)
 state1 = ctx.run(ctx.on.start, scenario.State())
-assert state1.opened_ports == [ops.Port("tcp", 42)]
+assert state1.opened_ports == {ops.Port("tcp", 42)}
 
 state2 = ctx.run(ctx.on.stop, state1)
-assert state2.opened_ports == []
+assert state2.opened_ports == {}
 ```
 
 ## Secrets
@@ -964,7 +963,7 @@ def test_start_on_deferred_update_status(MyCharm):
     """Test charm execution if a 'start' is dispatched when in the previous run an install had been deferred."""
     state_in = scenario.State(
         deferred=[
-            deferred(ctx.on.install, MyCharm._on_install)
+            DeferredEvent(ctx.on.install, MyCharm._on_install)
         ]
     )
     ctx = scenario.Context(MyCharm)
@@ -974,23 +973,6 @@ def test_start_on_deferred_update_status(MyCharm):
     # TONY NOTE: Can we make either of these work?
     assert isinstance(state.out.deferred[0], ops.StartEvent)
     assert isinstance(state.out.deferred[0].event, ops.StartEvent)     # state.out.deferred[0]: DeferredEvent
-```
-
-### Fine-tuning
-
-The `deferred` helper Scenario provides will not support out of the box all custom event subclasses, or events emitted by
-charm libraries or objects other than the main charm class.
-
-For general-purpose usage, you will need to instantiate DeferredEvent directly.
-
-```python
-import scenario
-
-my_deferred_event = scenario.DeferredEvent(
-    handle_path='MyCharm/MyCharmLib/on/database_ready[1]',
-    owner='MyCharmLib',  # the object observing the event. Could also be MyCharm.
-    observer='_on_database_ready'
-)
 ```
 
 ## StoredState
@@ -1051,17 +1033,10 @@ class MyCharm(ops.CharmBase):
 
 
 ctx = scenario.Context(MyCharm, meta={'name': 'juliette', "resources": {"foo": {"type": "oci-image"}}})
-# Again, the list or dict or set here is tricky, wanting to avoid duplication, but the object needing
-# to know its own name.
-ctx.run(ctx.on.start, scenario.State(resources={
-    'foo': scenario.Resource('foo', '/path/to/resource.tar', type='oci-image'),
-}))
-
-# Perhaps this?
 state_out = ctx.run(ctx.on.start, scenario.State(resources={
-    scenario.Resource('foo', '/path/to/resource.tar', type='oci-image'),
+    'foo': scenario.Resource('/path/to/resource.tar', type='oci-image'),
 }))
-assert state_out.resources["foo"] == ...  # Even though you're passing in a set and accessing via a dict?
+assert state_out.resources["foo"] == ...
 ```
 
 # Emitting custom events
