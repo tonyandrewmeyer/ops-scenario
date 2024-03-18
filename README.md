@@ -489,7 +489,7 @@ writing is close to that domain, you should probably override it and pass it man
 import scenario
 
 ctx.run(scenario.Event(ctx.on.foo_relation_changed, remote_unit_id=2), state)
-ctx.run(scenario.Event(ctx.on.containter1_pebble_custom_notice, notice_key="..."), state)
+ctx.run(scenario.Event(ctx.on.container1_pebble_custom_notice, notice_key="..."), state)
 ctx.run(scenario.Event(ctx.on.secret_changed, secret_id="..."), state)
 ```
 
