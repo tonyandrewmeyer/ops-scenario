@@ -122,7 +122,7 @@ class _MockModelBackend(_ModelBackend):
     ):
         # fixme: the charm will get hit with a StateValidationError
         #  here, not the expected ModelError...
-        port_ = Port(protocol, port)
+        port_ = Port(protocol=protocol, port=port)
         ports = self._state.opened_ports
         if port_ not in ports:
             ports.append(port_)
@@ -132,7 +132,7 @@ class _MockModelBackend(_ModelBackend):
         protocol: "_RawPortProtocolLiteral",
         port: Optional[int] = None,
     ):
-        _port = Port(protocol, port)
+        _port = Port(protocol=protocol, port=port)
         ports = self._state.opened_ports
         if _port in ports:
             ports.remove(_port)
@@ -540,7 +540,7 @@ class _MockModelBackend(_ModelBackend):
     def storage_add(self, name: str, count: int = 1):
         if not isinstance(count, int) or isinstance(count, bool):
             raise TypeError(
-                f"storage count must be integer, got: {count} ({type(count)})",
+                f"storage count must be integer, got: {count} ({type(count)}",
             )
 
         if "/" in name:

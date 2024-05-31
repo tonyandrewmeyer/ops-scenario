@@ -26,7 +26,7 @@ logger = scenario_logger.getChild("runtime")
 DEFAULT_JUJU_VERSION = "3.4"
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class ActionOutput:
     """Wraps the results of running an action event with `run_action`."""
 
@@ -440,10 +440,10 @@ class Context:
 
     def _finalize_action(self, state_out: "State"):
         ao = ActionOutput(
-            state_out,
-            self._action_logs,
-            self._action_results,
-            self._action_failure,
+            state=state_out,
+            logs=self._action_logs,
+            results=self._action_results,
+            failure=self._action_failure,
         )
 
         # reset all action-related state

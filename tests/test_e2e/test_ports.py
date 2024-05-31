@@ -35,5 +35,5 @@ def test_open_port(ctx):
 
 
 def test_close_port(ctx):
-    out = ctx.run("stop", State(opened_ports=[Port("tcp", 42)]))
+    out = ctx.run("stop", State(opened_ports=[Port(protocol="tcp", port=42)]))
     assert not out.opened_ports
