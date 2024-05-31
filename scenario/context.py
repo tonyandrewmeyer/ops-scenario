@@ -26,7 +26,7 @@ logger = scenario_logger.getChild("runtime")
 DEFAULT_JUJU_VERSION = "3.4"
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class ActionOutput:
     """Wraps the results of running an action event with `run_action`."""
 

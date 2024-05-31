@@ -247,7 +247,7 @@ def normalize_name(s: str):
     return s.replace("-", "_")
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class Address:
     hostname: str
     value: str
@@ -265,6 +265,7 @@ class Address:
 @dataclasses.dataclass(frozen=True)
 class BindAddress:
     interface_name: str
+    _: dataclasses.KW_ONLY
     addresses: List[Address]
     mac_address: Optional[str] = None
 
@@ -292,7 +293,7 @@ class BindAddress:
         return dct
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class Network:
     bind_addresses: List[BindAddress]
     ingress_addresses: List[str]
@@ -364,6 +365,8 @@ class _RelationBase:
     interface: Optional[str] = None
     """Interface name. Must match the interface name attached to this endpoint in metadata.yaml.
     If left empty, it will be automatically derived from metadata.yaml."""
+
+    _: dataclasses.KW_ONLY
 
     id: int = dataclasses.field(default_factory=next_relation_id)
     """Juju relation ID. Every new Relation instance gets a unique one,
@@ -915,7 +918,7 @@ def _status_to_entitystatus(obj: StatusBase) -> _EntityStatus:
     return _MyClass(cast(_RawStatusLiteral, obj.name), obj.message)
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class StoredState:
     name: str = "_stored"
 
@@ -953,7 +956,7 @@ class StoredState:
 _RawPortProtocolLiteral = Literal["tcp", "udp", "icmp"]
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class Port:
     """Represents a port on the charm host."""
 
@@ -1035,7 +1038,7 @@ class Storage:
         )
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class State:
     """Represents the juju-owned portion of a unit's state.
 
@@ -1398,6 +1401,8 @@ class Event:
     args: Tuple[Any, ...] = ()
     kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
 
+    _: dataclasses.KW_ONLY
+
     # if this is a storage event, the storage it refers to
     storage: Optional["Storage"] = None
     # if this is a relation event, the relation it refers to
@@ -1633,6 +1638,8 @@ def next_action_id(update=True):
 @dataclasses.dataclass(frozen=True)
 class Action:
     name: str
+
+    _: dataclasses.KW_ONLY
 
     params: Dict[str, "AnyJson"] = dataclasses.field(default_factory=dict)
 
