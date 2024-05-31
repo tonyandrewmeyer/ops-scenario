@@ -489,7 +489,7 @@ import dataclasses
 import scenario.state
 
 rel = scenario.Relation('foo')
-rel2 = dataclasses.replace(rel, local_app_data={"foo": "bar"}, relation_id=scenario.state.next_relation_id())
+rel2 = dataclasses.replace(rel, local_app_data={"foo": "bar"}, id=scenario.state.next_relation_id())
 assert rel2.id == rel.id + 1 
 ``` 
 
