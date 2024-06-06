@@ -619,7 +619,7 @@ def test_storedstate_consistency():
     assert_consistent(
         State(
             stored_state=[
-                StoredState(owner_path=None, content={"foo": "bar"}),
+                StoredState(content={"foo": "bar"}),
                 StoredState(name="my_stored_state", content={"foo": 1}),
                 StoredState(owner_path="MyCharmLib", content={"foo": None}),
                 StoredState(owner_path="OtherCharmLib", content={"foo": (1, 2, 3)}),
