@@ -230,3 +230,8 @@ def test_relation_set(mycharm):
 
     assert out.relations[0].local_app_data == {"a": "b"}
     assert out.relations[0].local_unit_data == {"c": "d", **DEFAULT_JUJU_DATABAG}
+
+
+def test_no_positional_arguments():
+    with pytest.raises(TypeError):
+        State(None)
