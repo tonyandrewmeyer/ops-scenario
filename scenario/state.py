@@ -260,12 +260,23 @@ class Network:
     def __init__(
         self,
         *,
-        bind_addresses: List[BindAddress],
-        ingress_addresses: List[str],
-        egress_subnets: List[str],
+        bind_addresses: Optional[List[BindAddress]] = None,
+        ingress_addresses: Optional[List[str]] = None,
+        egress_subnets: Optional[List[str]] = None,
     ):
+        if bind_addresses is None:
+            bind_addresses = [
+                BindAddress(
+                    interface_name="",
+                    addresses=[Address(hostname="", value="192.0.2.0", cidr="")],
+                ),
+            ]
         object.__setattr__(self, "bind_addresses", bind_addresses)
+        if ingress_addresses is None:
+            ingress_addresses = ["192.0.2.0"]
         object.__setattr__(self, "ingress_addresses", ingress_addresses)
+        if egress_subnets is None:
+            egress_subnets = ["192.0.2.0/24"]
         object.__setattr__(self, "egress_subnets", egress_subnets)
 
     def hook_tool_output_fmt(self):
@@ -275,32 +286,6 @@ class Network:
             "egress-subnets": self.egress_subnets,
             "ingress-addresses": self.ingress_addresses,
         }
-
-    @classmethod
-    def default(
-        cls,
-        private_address: str = "192.0.2.0",
-        hostname: str = "",
-        cidr: str = "",
-        interface_name: str = "",
-        mac_address: Optional[str] = None,
-        egress_subnets=("192.0.2.0/24",),
-        ingress_addresses=("192.0.2.0",),
-    ) -> "Network":
-        """Helper to create a minimal, heavily defaulted Network."""
-        return cls(
-            bind_addresses=[
-                BindAddress(
-                    interface_name=interface_name,
-                    mac_address=mac_address,
-                    addresses=[
-                        Address(hostname=hostname, value=private_address, cidr=cidr),
-                    ],
-                ),
-            ],
-            egress_subnets=list(egress_subnets),
-            ingress_addresses=list(ingress_addresses),
-        )
 
 
 _next_relation_id_counter = 1

@@ -4,7 +4,14 @@ from ops.charm import CharmBase
 from ops.framework import Framework
 
 from scenario import Context
-from scenario.state import Network, Relation, State, SubordinateRelation
+from scenario.state import (
+    Address,
+    BindAddress,
+    Network,
+    Relation,
+    State,
+    SubordinateRelation,
+)
 
 
 @pytest.fixture(scope="function")
@@ -40,6 +47,14 @@ def test_ip_get(mycharm):
         },
     )
 
+    network = Network(
+        bind_addresses=[
+            BindAddress(
+                interface_name="",
+                addresses=[Address(hostname="", value="203.0.113.0", cidr="")],
+            ),
+        ],
+    )
     with ctx.manager(
         ctx.on.update_status(),
         State(
@@ -51,7 +66,7 @@ def test_ip_get(mycharm):
                     id=1,
                 ),
             ],
-            networks={"foo": Network.default(private_address="4.4.4.4")},
+            networks={"foo": network},
         ),
     ) as mgr:
         # we have a network for the relation
@@ -65,7 +80,10 @@ def test_ip_get(mycharm):
         )
 
         # and an extra binding
-        assert str(mgr.charm.model.get_binding("foo").network.bind_address) == "4.4.4.4"
+        assert (
+            str(mgr.charm.model.get_binding("foo").network.bind_address)
+            == "203.0.113.0"
+        )
 
 
 def test_no_sub_binding(mycharm):
@@ -113,7 +131,7 @@ def test_no_relation_error(mycharm):
                     id=1,
                 ),
             ],
-            networks={"bar": Network.default()},
+            networks={"bar": Network()},
         ),
     ) as mgr:
         with pytest.raises(RelationNotFoundError):

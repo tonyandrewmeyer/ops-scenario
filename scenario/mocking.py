@@ -305,7 +305,7 @@ class _MockModelBackend(_ModelBackend):
             raise RelationNotFoundError()
 
         # We look in State.networks for an override. If not given, we return a default network.
-        network = self._state.networks.get(binding_name, Network.default())
+        network = self._state.networks.get(binding_name, Network())
         return network.hook_tool_output_fmt()
 
     # setter methods: these can mutate the state.
