@@ -572,8 +572,7 @@ def test_storedstate_consistency():
         State(
             stored_state=[
                 StoredState(owner_path=None, content={"foo": "bar"}),
-                StoredState(
-                    owner_path=None, name="my_stored_state", content={"foo": 1}
+                StoredState(name="my_stored_state", content={"foo": 1}
                 ),
                 StoredState(owner_path="MyCharmLib", content={"foo": None}),
                 StoredState(owner_path="OtherCharmLib", content={"foo": (1, 2, 3)}),

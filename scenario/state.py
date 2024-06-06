@@ -917,11 +917,12 @@ def _status_to_entitystatus(obj: StatusBase) -> _EntityStatus:
 
 @dataclasses.dataclass(frozen=True)
 class StoredState:
+    name: str = "_stored"
+
     # /-separated Object names. E.g. MyCharm/MyCharmLib.
     # if None, this StoredState instance is owned by the Framework.
     owner_path: Optional[str]
 
-    name: str = "_stored"
     # Ideally, the type here would be only marshallable types, rather than Any.
     # However, it's complex to describe those types, since it's a recursive
     # definition - even in TypeShed the _Marshallable type includes containers
@@ -933,14 +934,14 @@ class StoredState:
     # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
     def __init__(
         self,
+        name: str = "_stored",
         *,
         owner_path: Optional[str] = None,
-        name: str = "_stored",
         content: Optional[Dict[str, Any]] = None,
         _data_type_name: str = "StoredStateData",
     ):
-        object.__setattr__(self, "owner_path", owner_path)
         object.__setattr__(self, "name", name)
+        object.__setattr__(self, "owner_path", owner_path)
         object.__setattr__(self, "content", content or {})
         object.__setattr__(self, "_data_type_name", _data_type_name)
 

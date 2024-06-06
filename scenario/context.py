@@ -26,7 +26,7 @@ logger = scenario_logger.getChild("runtime")
 DEFAULT_JUJU_VERSION = "3.4"
 
 
-@dataclasses.dataclass()
+@dataclasses.dataclass
 class ActionOutput:
     """Wraps the results of running an action event with `run_action`."""
 
@@ -47,12 +47,12 @@ class ActionOutput:
         *,
         state: "State",
         logs: List[str],
-        results: Optional[Dict[str, Any]],
-        failure: Optional[str],
+        results: Optional[Dict[str, Any]] = None,
+        failure: Optional[str] = None,
     ):
         object.__setattr__(self, "state", state)
         object.__setattr__(self, "logs", logs)
-        object.__setattr__(self, "results", results)
+        object.__setattr__(self, "results", results or {})
         object.__setattr__(self, "failure", failure)
 
     @property
