@@ -6,7 +6,17 @@ from ops.charm import CharmBase, CharmEvents, CollectStatusEvent
 from ops.framework import EventBase, Framework
 from ops.model import ActiveStatus, UnknownStatus, WaitingStatus
 
-from scenario.state import DEFAULT_JUJU_DATABAG, Container, Relation, State
+from scenario.state import (
+    DEFAULT_JUJU_DATABAG,
+    Address,
+    BindAddress,
+    Container,
+    Model,
+    Network,
+    Port,
+    Relation,
+    State,
+)
 from tests.helpers import jsonpatch_delta, sort_patch, trigger
 
 CUSTOM_EVT_SUFFIXES = {
@@ -232,6 +242,49 @@ def test_relation_set(mycharm):
     assert out.relations[0].local_unit_data == {"c": "d", **DEFAULT_JUJU_DATABAG}
 
 
-def test_no_positional_arguments():
+@pytest.mark.parametrize("klass", (State, Address, BindAddress, Network, Port))
+def test_no_positional_arguments(klass):
     with pytest.raises(TypeError):
-        State(None)
+        klass(None)
+
+
+def test_model_positional_arguments():
+    with pytest.raises(TypeError):
+        Model("", "")
+
+
+def test_container_positional_arguments():
+    with pytest.raises(TypeError):
+        Container("", "")
+
+
+def test_container_default_values():
+    name = "foo"
+    container = Container(name)
+    assert container.name == name
+    assert container.can_connect is False
+    assert container.layers == {}
+    assert container.service_status == {}
+    assert container.mounts == {}
+    assert container.exec_mock == {}
+    assert container.layers == {}
+    assert container._base_plan == {}
+
+
+def state_default_values():
+    state = State()
+    assert state.config == {}
+    assert state.relations == []
+    assert state.networks == {}
+    assert state.containers == []
+    assert state.storage == []
+    assert state.opened_ports == []
+    assert state.secrets == []
+    assert state.resources == {}
+    assert state.deferred == []
+    assert isinstance(state.model, Model)
+    assert state.leader is False
+    assert state.planned_units == 1
+    assert state.app_status == UnknownStatus()
+    assert state.unit_status == UnknownStatus()
+    assert state.workload_version == ""

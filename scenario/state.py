@@ -306,7 +306,7 @@ class Network:
 _next_relation_id_counter = 1
 
 
-def next_relation_id(update=True):
+def next_relation_id(*, update=True):
     global _next_relation_id_counter
     cur = _next_relation_id_counter
     if update:
@@ -900,7 +900,7 @@ class Port:
 _next_storage_index_counter = 0  # storage indices start at 0
 
 
-def next_storage_index(update=True):
+def next_storage_index(*, update=True):
     """Get the index (used to be called ID) the next Storage to be created will get.
 
     Pass update=False if you're only inspecting it.
@@ -1441,7 +1441,7 @@ class _Event:
 _next_action_id_counter = 1
 
 
-def next_action_id(update=True):
+def next_action_id(*, update=True):
     global _next_action_id_counter
     cur = _next_action_id_counter
     if update:
