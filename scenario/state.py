@@ -252,9 +252,9 @@ class BindAddress:
 
 @dataclasses.dataclass(frozen=True)
 class Network:
-    bind_addresses: List[BindAddress]
-    ingress_addresses: List[str]
-    egress_subnets: List[str]
+    bind_addresses: Optional[List[BindAddress]] = None
+    ingress_addresses: Optional[List[str]] = None
+    egress_subnets: Optional[List[str]] = None
 
     # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
     def __init__(
@@ -281,6 +281,7 @@ class Network:
 
     def hook_tool_output_fmt(self):
         # dumps itself to dict in the same format the hook tool would
+        assert self.bind_addresses is not None
         return {
             "bind-addresses": [ba.hook_tool_output_fmt() for ba in self.bind_addresses],
             "egress-subnets": self.egress_subnets,
