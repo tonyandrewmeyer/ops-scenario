@@ -26,7 +26,7 @@ logger = scenario_logger.getChild("runtime")
 DEFAULT_JUJU_VERSION = "3.4"
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass()
 class ActionOutput:
     """Wraps the results of running an action event with `run_action`."""
 
@@ -40,6 +40,20 @@ class ActionOutput:
     Will be None if the charm never calls action-set."""
     failure: Optional[str] = None
     """If the action is not a success: the message the charm set when failing the action."""
+
+    # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
+    def __init__(
+        self,
+        *,
+        state: "State",
+        logs: List[str],
+        results: Optional[Dict[str, Any]] = None,
+        failure: Optional[str] = None,
+    ):
+        object.__setattr__(self, "state", state)
+        object.__setattr__(self, "logs", logs)
+        object.__setattr__(self, "results", results or {})
+        object.__setattr__(self, "failure", failure)
 
     @property
     def success(self) -> bool:
@@ -440,10 +454,10 @@ class Context:
 
     def _finalize_action(self, state_out: "State"):
         ao = ActionOutput(
-            state_out,
-            self._action_logs,
-            self._action_results,
-            self._action_failure,
+            state=state_out,
+            logs=self._action_logs,
+            results=self._action_results,
+            failure=self._action_failure,
         )
 
         # reset all action-related state

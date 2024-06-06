@@ -97,7 +97,7 @@ def test_fs_push(charm_cls):
 
 
 def test_port_equality():
-    assert Port("tcp", 42) == Port("tcp", 42)
+    assert Port(protocol="tcp", port=42) == Port(protocol="tcp", port=42)
 
 
 @pytest.mark.parametrize("make_dirs", (True, False))

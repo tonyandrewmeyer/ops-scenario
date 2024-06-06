@@ -124,14 +124,14 @@ class BindFailedError(RuntimeError):
 
 @dataclasses.dataclass(frozen=True)
 class Secret:
+    # mapping from revision IDs to each revision's contents
+    contents: Dict[int, "RawSecretRevisionContents"]
+
     id: str
     # CAUTION: ops-created Secrets (via .add_secret()) will have a canonicalized
     #  secret id (`secret:` prefix)
     #  but user-created ones will not. Using post-init to patch it in feels bad, but requiring the user to
     #  add the prefix manually every time seems painful as well.
-
-    # mapping from revision IDs to each revision's contents
-    contents: Dict[int, "RawSecretRevisionContents"]
 
     # indicates if the secret is owned by THIS unit, THIS app or some other app/unit.
     # if None, the implication is that the secret has been granted to this unit.
@@ -148,6 +148,30 @@ class Secret:
     description: Optional[str] = None
     expire: Optional[datetime.datetime] = None
     rotate: Optional[SecretRotate] = None
+
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(
+        self,
+        contents,
+        *,
+        id: str,
+        owner: Literal["unit", "app", None] = None,
+        revision: int = 0,
+        remote_grants: Optional[Dict[int, Set[str]]] = None,
+        label: Optional[str] = None,
+        description: Optional[str] = None,
+        expire: Optional[datetime.datetime] = None,
+        rotate: Optional[SecretRotate] = None,
+    ):
+        object.__setattr__(self, "contents", contents)
+        object.__setattr__(self, "id", id)
+        object.__setattr__(self, "owner", owner)
+        object.__setattr__(self, "revision", revision)
+        object.__setattr__(self, "remote_grants", remote_grants or {})
+        object.__setattr__(self, "label", label)
+        object.__setattr__(self, "description", description)
+        object.__setattr__(self, "expire", expire)
+        object.__setattr__(self, "rotate", rotate)
 
     # consumer-only events
     @property
@@ -230,12 +254,31 @@ class Address:
     cidr: str
     address: str = ""  # legacy
 
+    # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
+    def __init__(self, *, hostname: str, value: str, cidr: str, address: str = ""):
+        object.__setattr__(self, "hostname", hostname)
+        object.__setattr__(self, "value", value)
+        object.__setattr__(self, "cidr", cidr)
+        object.__setattr__(self, "address", address)
+
 
 @dataclasses.dataclass(frozen=True)
 class BindAddress:
     interface_name: str
     addresses: List[Address]
     mac_address: Optional[str] = None
+
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(
+        self,
+        interface_name: str,
+        *,
+        addresses: List[Address],
+        mac_address: Optional[str] = None,
+    ):
+        object.__setattr__(self, "interface_name", interface_name)
+        object.__setattr__(self, "addresses", addresses)
+        object.__setattr__(self, "mac_address", mac_address)
 
     def hook_tool_output_fmt(self):
         # dumps itself to dict in the same format the hook tool would
@@ -254,6 +297,18 @@ class Network:
     bind_addresses: List[BindAddress]
     ingress_addresses: List[str]
     egress_subnets: List[str]
+
+    # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
+    def __init__(
+        self,
+        *,
+        bind_addresses: List[BindAddress],
+        ingress_addresses: List[str],
+        egress_subnets: List[str],
+    ):
+        object.__setattr__(self, "bind_addresses", bind_addresses)
+        object.__setattr__(self, "ingress_addresses", ingress_addresses)
+        object.__setattr__(self, "egress_subnets", egress_subnets)
 
     def hook_tool_output_fmt(self):
         # dumps itself to dict in the same format the hook tool would
@@ -310,7 +365,7 @@ class _RelationBase:
     """Interface name. Must match the interface name attached to this endpoint in metadata.yaml.
     If left empty, it will be automatically derived from metadata.yaml."""
 
-    relation_id: int = dataclasses.field(default_factory=next_relation_id)
+    id: int = dataclasses.field(default_factory=next_relation_id)
     """Juju relation ID. Every new Relation instance gets a unique one,
     if there's trouble, override."""
 
@@ -321,6 +376,34 @@ class _RelationBase:
         default_factory=lambda: DEFAULT_JUJU_DATABAG.copy(),
     )
     """This unit's databag for this relation."""
+
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(
+        self,
+        endpoint: str,
+        interface: Optional[str] = None,
+        *,
+        id: Optional[int] = None,
+        local_app_data: Optional["RawDataBagContents"] = None,
+        local_unit_data: Optional["RawDataBagContents"] = None,
+    ):
+        object.__setattr__(self, "endpoint", endpoint)
+        object.__setattr__(self, "interface", interface)
+        object.__setattr__(self, "id", next_relation_id() if id is None else id)
+        object.__setattr__(self, "local_app_data", local_app_data or {})
+        object.__setattr__(
+            self,
+            "local_unit_data",
+            DEFAULT_JUJU_DATABAG.copy() if local_unit_data is None else local_unit_data,
+        )
+        if type(self) is _RelationBase:
+            raise RuntimeError(
+                "_RelationBase cannot be instantiated directly; "
+                "please use Relation, PeerRelation, or SubordinateRelation",
+            )
+
+        for databag in self._databags:
+            self._validate_databag(databag)
 
     @property
     def _databags(self):
@@ -339,16 +422,6 @@ class _RelationBase:
     ) -> "RawDataBagContents":
         """Return the databag for some remote unit ID."""
         raise NotImplementedError()
-
-    def __post_init__(self):
-        if type(self) is _RelationBase:
-            raise RuntimeError(
-                "_RelationBase cannot be instantiated directly; "
-                "please use Relation, PeerRelation, or SubordinateRelation",
-            )
-
-        for databag in self._databags:
-            self._validate_databag(databag)
 
     def _validate_databag(self, databag: dict):
         if not isinstance(databag, dict):
@@ -423,6 +496,39 @@ class Relation(_RelationBase):
         default_factory=lambda: {0: DEFAULT_JUJU_DATABAG.copy()},  # dedup
     )
 
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(
+        self,
+        endpoint: str,
+        interface: Optional[str] = None,
+        *,
+        id: Optional[int] = None,
+        local_app_data: Optional["RawDataBagContents"] = None,
+        local_unit_data: Optional["RawDataBagContents"] = None,
+        remote_app_name: str = "remote",
+        limit: int = 1,
+        remote_app_data: Optional["RawDataBagContents"] = None,
+        remote_units_data: Optional[Dict["UnitID", "RawDataBagContents"]] = None,
+    ):
+        object.__setattr__(self, "remote_app_name", remote_app_name)
+        object.__setattr__(self, "limit", limit)
+        object.__setattr__(self, "remote_app_data", remote_app_data or {})
+        object.__setattr__(
+            self,
+            "remote_units_data",
+            {0: DEFAULT_JUJU_DATABAG.copy()}
+            if remote_units_data is None
+            else remote_units_data,
+        )
+        # Do the super init last, as it will call _validate_databag on the databags.
+        super().__init__(
+            endpoint,
+            interface,
+            id=id,
+            local_app_data=local_app_data,
+            local_unit_data=local_unit_data,
+        )
+
     @property
     def _remote_app_name(self) -> str:
         """Who is on the other end of this relation?"""
@@ -456,6 +562,39 @@ class SubordinateRelation(_RelationBase):
     # app name and ID of the remote unit that *this unit* is attached to.
     remote_app_name: str = "remote"
     remote_unit_id: int = 0
+
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(
+        self,
+        endpoint: str,
+        interface: Optional[str] = None,
+        *,
+        id: Optional[int] = None,
+        local_app_data: Optional["RawDataBagContents"] = None,
+        local_unit_data: Optional["RawDataBagContents"] = None,
+        remote_app_data: Optional["RawDataBagContents"] = None,
+        remote_unit_data: Optional["RawDataBagContents"] = None,
+        remote_app_name: str = "remote",
+        remote_unit_id: int = 0,
+    ):
+        object.__setattr__(self, "remote_app_data", remote_app_data or {})
+        object.__setattr__(
+            self,
+            "remote_unit_data",
+            DEFAULT_JUJU_DATABAG.copy()
+            if remote_unit_data is None
+            else remote_unit_data,
+        )
+        object.__setattr__(self, "remote_app_name", remote_app_name)
+        object.__setattr__(self, "remote_unit_id", remote_unit_id)
+        # Do the super init last, as it will call _validate_databag on the databags.
+        super().__init__(
+            endpoint,
+            interface,
+            id=id,
+            local_app_data=local_app_data,
+            local_unit_data=local_unit_data,
+        )
 
     @property
     def _remote_unit_ids(self) -> Tuple[int]:
@@ -492,6 +631,31 @@ class PeerRelation(_RelationBase):
     # mapping from peer unit IDs to their databag contents.
     # Consistency checks will validate that *this unit*'s ID is not in here.
 
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(
+        self,
+        endpoint: str,
+        interface: Optional[str] = None,
+        *,
+        id: Optional[int] = None,
+        local_app_data: Optional["RawDataBagContents"] = None,
+        local_unit_data: Optional["RawDataBagContents"] = None,
+        peers_data: Optional[Dict["UnitID", "RawDataBagContents"]] = None,
+    ):
+        object.__setattr__(
+            self,
+            "peers_data",
+            {0: DEFAULT_JUJU_DATABAG.copy()} if peers_data is None else peers_data,
+        )
+        # Do the super init last, as it will call _validate_databag on the databags.
+        super().__init__(
+            endpoint,
+            interface,
+            id=id,
+            local_app_data=local_app_data,
+            local_unit_data=local_unit_data,
+        )
+
     @property
     def _databags(self):
         """Yield all databags in this relation."""
@@ -520,11 +684,23 @@ def _random_model_name():
 @dataclasses.dataclass(frozen=True)
 class Model:
     name: str = dataclasses.field(default_factory=_random_model_name)
+
     uuid: str = dataclasses.field(default_factory=lambda: str(uuid4()))
 
     # whatever juju models --format=json | jq '.models[<current-model-index>].type' gives back.
     # TODO: make this exhaustive.
     type: Literal["kubernetes", "lxd"] = "kubernetes"
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        *,
+        uuid: Optional[str] = None,
+        type: Literal["kubernetes", "lxd"] = "kubernetes",
+    ):
+        object.__setattr__(self, "name", _random_model_name() if name is None else name)
+        object.__setattr__(self, "uuid", str(uuid4()) if uuid is None else uuid)
+        object.__setattr__(self, "type", type)
 
 
 # for now, proc mock allows you to map one command to one mocked output.
@@ -569,6 +745,7 @@ class Mount:
 @dataclasses.dataclass(frozen=True)
 class Container:
     name: str
+
     can_connect: bool = False
 
     # This is the base plan. On top of it, one can add layers.
@@ -602,6 +779,26 @@ class Container:
     mounts: Dict[str, Mount] = dataclasses.field(default_factory=dict)
 
     exec_mock: _ExecMock = dataclasses.field(default_factory=dict)
+
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(
+        self,
+        name: str,
+        *,
+        can_connect: bool = False,
+        _base_plan: Optional[dict] = None,
+        layers: Optional[Dict[str, pebble.Layer]] = None,
+        service_status: Optional[Dict[str, pebble.ServiceStatus]] = None,
+        mounts: Optional[Dict[str, Mount]] = None,
+        exec_mock: Optional[_ExecMock] = None,
+    ):
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "can_connect", can_connect)
+        object.__setattr__(self, "_base_plan", _base_plan or {})
+        object.__setattr__(self, "layers", layers or {})
+        object.__setattr__(self, "service_status", service_status or {})
+        object.__setattr__(self, "mounts", mounts or {})
+        object.__setattr__(self, "exec_mock", exec_mock or {})
 
     def _render_services(self):
         # copied over from ops.testing._TestingPebbleClient._render_services()
@@ -720,11 +917,12 @@ def _status_to_entitystatus(obj: StatusBase) -> _EntityStatus:
 
 @dataclasses.dataclass(frozen=True)
 class StoredState:
+    name: str = "_stored"
+
     # /-separated Object names. E.g. MyCharm/MyCharmLib.
     # if None, this StoredState instance is owned by the Framework.
     owner_path: Optional[str]
 
-    name: str = "_stored"
     # Ideally, the type here would be only marshallable types, rather than Any.
     # However, it's complex to describe those types, since it's a recursive
     # definition - even in TypeShed the _Marshallable type includes containers
@@ -732,6 +930,20 @@ class StoredState:
     content: Dict[str, Any] = dataclasses.field(default_factory=dict)
 
     _data_type_name: str = "StoredStateData"
+
+    # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
+    def __init__(
+        self,
+        name: str = "_stored",
+        *,
+        owner_path: Optional[str] = None,
+        content: Optional[Dict[str, Any]] = None,
+        _data_type_name: str = "StoredStateData",
+    ):
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "owner_path", owner_path)
+        object.__setattr__(self, "content", content or {})
+        object.__setattr__(self, "_data_type_name", _data_type_name)
 
     @property
     def handle_path(self):
@@ -748,6 +960,16 @@ class Port:
     protocol: _RawPortProtocolLiteral
     port: Optional[int] = None
     """The port to open. Required for TCP and UDP; not allowed for ICMP."""
+
+    # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
+    def __init__(
+        self,
+        *,
+        protocol: _RawPortProtocolLiteral,
+        port: Optional[int] = None,
+    ):
+        object.__setattr__(self, "protocol", protocol)
+        object.__setattr__(self, "port", port)
 
     def __post_init__(self):
         port = self.port
@@ -876,15 +1098,51 @@ class State:
     workload_version: str = ""
     """Workload version."""
 
-    def __post_init__(self):
-        for name in ["app_status", "unit_status"]:
-            val = getattr(self, name)
-            if isinstance(val, _EntityStatus):
-                pass
-            elif isinstance(val, StatusBase):
-                object.__setattr__(self, name, _status_to_entitystatus(val))
-            else:
-                raise TypeError(f"Invalid status.{name}: {val!r}")
+    # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
+    def __init__(
+        self,
+        *,
+        config: Optional[Dict[str, Union[str, int, float, bool]]] = None,
+        relations: Optional[List["AnyRelation"]] = None,
+        networks: Optional[Dict[str, Network]] = None,
+        containers: Optional[List[Container]] = None,
+        storage: Optional[List[Storage]] = None,
+        opened_ports: Optional[List[Port]] = None,
+        leader: bool = False,
+        model: Optional[Model] = None,
+        secrets: Optional[List[Secret]] = None,
+        resources: Optional[Dict[str, "PathLike"]] = None,
+        planned_units: int = 1,
+        deferred: Optional[List["DeferredEvent"]] = None,
+        stored_state: Optional[List["StoredState"]] = None,
+        app_status: Union[StatusBase, _EntityStatus] = _EntityStatus("unknown"),
+        unit_status: Union[StatusBase, _EntityStatus] = _EntityStatus("unknown"),
+        workload_version: str = "",
+    ):
+        object.__setattr__(self, "config", config or {})
+        object.__setattr__(self, "relations", relations or [])
+        object.__setattr__(self, "networks", networks or {})
+        object.__setattr__(self, "containers", containers or [])
+        object.__setattr__(self, "storage", storage or [])
+        object.__setattr__(self, "opened_ports", opened_ports or [])
+        object.__setattr__(self, "leader", leader)
+        object.__setattr__(self, "model", Model() if model is None else model)
+        object.__setattr__(self, "secrets", secrets or [])
+        object.__setattr__(self, "resources", resources or {})
+        object.__setattr__(self, "planned_units", planned_units)
+        object.__setattr__(self, "deferred", deferred or [])
+        object.__setattr__(self, "stored_state", stored_state or [])
+        if isinstance(app_status, StatusBase):
+            app_status = _status_to_entitystatus(app_status)
+        elif not isinstance(app_status, _EntityStatus):
+            raise TypeError(f"Invalid status.app_status: {app_status!r}")
+        object.__setattr__(self, "app_status", app_status)
+        if isinstance(unit_status, StatusBase):
+            unit_status = _status_to_entitystatus(unit_status)
+        elif not isinstance(unit_status, _EntityStatus):
+            raise TypeError(f"Invalid status.app_status: {unit_status!r}")
+        object.__setattr__(self, "unit_status", unit_status)
+        object.__setattr__(self, "workload_version", workload_version)
 
     def _update_workload_version(self, new_workload_version: str):
         """Update the current app version and record the previous one."""
@@ -1346,7 +1604,7 @@ class Event:
 
             snapshot_data = {
                 "relation_name": relation.endpoint,
-                "relation_id": relation.relation_id,
+                "relation_id": relation.id,
                 "app_name": remote_app,
                 "unit_name": f"{remote_app}/{self.relation_remote_unit_id}",
             }
@@ -1383,6 +1641,18 @@ class Action:
 
     Every action invocation is automatically assigned a new one. Override in
     the rare cases where a specific ID is required."""
+
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(
+        self,
+        name: str,
+        *,
+        params: Optional[Dict[str, "AnyJson"]] = None,
+        id: Optional[str] = None,
+    ):
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "params", params or {})
+        object.__setattr__(self, "id", next_action_id() if id is None else id)
 
     @property
     def event(self) -> Event:

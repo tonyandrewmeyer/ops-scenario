@@ -36,7 +36,7 @@ def test_bind_relation_toomany(caplog):
 
 def test_bind_secret():
     event = Event("secret-changed")
-    secret = Secret("foo", {"a": "b"})
+    secret = Secret(id="foo", contents={"a": "b"})
     state = State(secrets=[secret])
     assert event.bind(state).secret is secret
 
