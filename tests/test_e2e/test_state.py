@@ -271,7 +271,7 @@ def test_container_default_values():
     assert container._base_plan == {}
 
 
-def state_default_values():
+def test_state_default_values():
     state = State()
     assert state.config == {}
     assert state.relations == []
