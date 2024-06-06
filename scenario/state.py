@@ -865,7 +865,7 @@ _RawPortProtocolLiteral = Literal["tcp", "udp", "icmp"]
 class Port:
     """Represents a port on the charm host."""
 
-    protocol: _RawPortProtocolLiteral
+    protocol: _RawPortProtocolLiteral = "tcp"
     port: Optional[int] = None
     """The port to open. Required for TCP and UDP; not allowed for ICMP."""
 
@@ -873,14 +873,12 @@ class Port:
     def __init__(
         self,
         *,
-        protocol: _RawPortProtocolLiteral,
+        protocol: _RawPortProtocolLiteral = "tcp",
         port: Optional[int] = None,
     ):
         object.__setattr__(self, "protocol", protocol)
         object.__setattr__(self, "port", port)
 
-    def __post_init__(self):
-        port = self.port
         is_icmp = self.protocol == "icmp"
         if port:
             if is_icmp:
