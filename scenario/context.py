@@ -43,7 +43,7 @@ class ActionOutput:
     In most cases, actions are not expected to be affecting it."""
     logs: List[str]
     """Any logs associated with the action output, set by the charm."""
-    results: Optional[Dict[str, Any]]
+    results: Optional[Dict[str, Any]] = None
     """Key-value mapping assigned by the charm as a result of the action.
     Will be None if the charm never calls action-set."""
     failure: Optional[str] = None
@@ -60,7 +60,7 @@ class ActionOutput:
     ):
         object.__setattr__(self, "state", state)
         object.__setattr__(self, "logs", logs)
-        object.__setattr__(self, "results", results or {})
+        object.__setattr__(self, "results", results)
         object.__setattr__(self, "failure", failure)
 
     @property
