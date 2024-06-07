@@ -14,7 +14,9 @@ from typing import (
     Any,
     Callable,
     Dict,
+    FrozenSet,
     Generic,
+    Iterable,
     List,
     Literal,
     Optional,
@@ -252,31 +254,41 @@ class BindAddress:
 
 @dataclasses.dataclass(frozen=True)
 class Network:
-    bind_addresses: Optional[List[BindAddress]] = None
-    ingress_addresses: Optional[List[str]] = None
-    egress_subnets: Optional[List[str]] = None
+    bind_addresses: Optional[FrozenSet[BindAddress]] = None
+    ingress_addresses: Optional[FrozenSet[str]] = None
+    """IP addresses that other units should use to get in touch with the charm.
+
+    If not set, defaults to {"192.0.2.0"}.
+    """
+
+    egress_subnets: Optional[FrozenSet[str]] = None
+    """Networks representing the subnets that other units will see the charm connecting from.
+
+    If not set, defaults to {"192.0.2.0/24"}.
+    """
 
     # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
     def __init__(
         self,
         *,
-        bind_addresses: Optional[List[BindAddress]] = None,
-        ingress_addresses: Optional[List[str]] = None,
-        egress_subnets: Optional[List[str]] = None,
+        bind_addresses: Optional[Iterable[BindAddress]] = None,
+        ingress_addresses: Optional[Iterable[str]] = None,
+        egress_subnets: Optional[Iterable[str]] = None,
     ):
         if bind_addresses is None:
-            bind_addresses = [
-                BindAddress(
-                    interface_name="",
-                    addresses=[Address(hostname="", value="192.0.2.0", cidr="")],
-                ),
-            ]
+            bind_addresses = {BindAddress(Address(value="192.0.2.0"))}
+        elif not isinstance(bind_addresses, frozenset):
+            bind_addresses = frozenset(bind_addresses)
         object.__setattr__(self, "bind_addresses", bind_addresses)
         if ingress_addresses is None:
-            ingress_addresses = ["192.0.2.0"]
+            ingress_addresses = frozenset({"192.0.2.0"})
+        elif not isinstance(ingress_addresses, frozenset):
+            ingress_addresses = frozenset(ingress_addresses)
         object.__setattr__(self, "ingress_addresses", ingress_addresses)
         if egress_subnets is None:
-            egress_subnets = ["192.0.2.0/24"]
+            egress_subnets = frozenset({"192.0.2.0/24"})
+        elif not isinstance(egress_subnets, frozenset):
+            egress_subnets = frozenset(egress_subnets)
         object.__setattr__(self, "egress_subnets", egress_subnets)
 
     def hook_tool_output_fmt(self):
