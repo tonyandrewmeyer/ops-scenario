@@ -47,14 +47,7 @@ def test_ip_get(mycharm):
         },
     )
 
-    network = Network(
-        bind_addresses=[
-            BindAddress(
-                interface_name="",
-                addresses=[Address(hostname="", value="203.0.113.0", cidr="")],
-            ),
-        ],
-    )
+    network = Network(bind_addresses=[BindAddress(addresses=[Address("203.0.113.0")])])
     with ctx.manager(
         ctx.on.update_status(),
         State(
