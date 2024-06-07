@@ -207,35 +207,35 @@ def normalize_name(s: str):
 
 @dataclasses.dataclass(frozen=True)
 class Address:
-    hostname: str
     value: str
+    hostname: str
     cidr: str
     address: str = ""  # legacy
 
-    # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
-    def __init__(self, *, hostname: str, value: str, cidr: str, address: str = ""):
-        object.__setattr__(self, "hostname", hostname)
+    # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
+    def __init__(self, value: str, *, hostname: str, cidr: str, address: str = ""):
         object.__setattr__(self, "value", value)
+        object.__setattr__(self, "hostname", hostname)
         object.__setattr__(self, "cidr", cidr)
         object.__setattr__(self, "address", address)
 
 
 @dataclasses.dataclass(frozen=True)
 class BindAddress:
-    interface_name: str
     addresses: List[Address]
+    interface_name: str = ""
     mac_address: Optional[str] = None
 
     # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
     def __init__(
         self,
-        interface_name: str,
-        *,
         addresses: List[Address],
+        *,
+        interface_name: str = "",
         mac_address: Optional[str] = None,
     ):
-        object.__setattr__(self, "interface_name", interface_name)
         object.__setattr__(self, "addresses", addresses)
+        object.__setattr__(self, "interface_name", interface_name)
         object.__setattr__(self, "mac_address", mac_address)
 
     def hook_tool_output_fmt(self):
