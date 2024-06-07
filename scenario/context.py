@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union, cast
 
-from ops import CharmBase, EventBase
+from ops import CharmBase, EventBase, StatusBase
 
 from scenario.logger import logger as scenario_logger
 from scenario.runtime import Runtime
@@ -25,7 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from ops.testing import CharmType
 
     from scenario.ops_main_mock import Ops
-    from scenario.state import AnyRelation, JujuLogLine, State, _EntityStatus
+    from scenario.state import AnyRelation, JujuLogLine, State
 
     PathLike = Union[str, Path]
 
@@ -431,8 +431,8 @@ class Context:
 
         # streaming side effects from running an event
         self.juju_log: List["JujuLogLine"] = []
-        self.app_status_history: List["_EntityStatus"] = []
-        self.unit_status_history: List["_EntityStatus"] = []
+        self.app_status_history: List[StatusBase] = []
+        self.unit_status_history: List[StatusBase] = []
         self.workload_version_history: List[str] = []
         self.emitted_events: List[EventBase] = []
         self.requested_storages: Dict[str, int] = {}
@@ -478,9 +478,9 @@ class Context:
     def _record_status(self, state: "State", is_app: bool):
         """Record the previous status before a status change."""
         if is_app:
-            self.app_status_history.append(cast("_EntityStatus", state.app_status))
+            self.app_status_history.append(state.app_status)
         else:
-            self.unit_status_history.append(cast("_EntityStatus", state.unit_status))
+            self.unit_status_history.append(state.unit_status)
 
     def manager(self, event: "_Event", state: "State"):
         """Context manager to introspect live charm object before and after the event is emitted.

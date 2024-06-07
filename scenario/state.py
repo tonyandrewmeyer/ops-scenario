@@ -30,7 +30,7 @@ from uuid import uuid4
 import yaml
 from ops import pebble
 from ops.charm import CharmBase, CharmEvents
-from ops.model import SecretRotate, StatusBase
+from ops.model import SecretRotate, StatusBase, UnknownStatus
 
 from scenario.logger import logger as scenario_logger
 
@@ -590,43 +590,6 @@ _RawStatusLiteral = Literal[
 
 
 @dataclasses.dataclass(frozen=True)
-class _EntityStatus:
-    """This class represents StatusBase and should not be interacted with directly."""
-
-    # Why not use StatusBase directly? Because that's not json-serializable.
-
-    name: _RawStatusLiteral
-    message: str = ""
-
-    def __eq__(self, other):
-        if isinstance(other, (StatusBase, _EntityStatus)):
-            return (self.name, self.message) == (other.name, other.message)
-        logger.warning(
-            f"Comparing Status with {other} is not stable and will be forbidden soon."
-            f"Please compare with StatusBase directly.",
-        )
-        return super().__eq__(other)
-
-    def __repr__(self):
-        status_type_name = self.name.title() + "Status"
-        if self.name == "unknown":
-            return f"{status_type_name}()"
-        return f"{status_type_name}('{self.message}')"
-
-
-def _status_to_entitystatus(obj: StatusBase) -> _EntityStatus:
-    """Convert StatusBase to _EntityStatus."""
-    statusbase_subclass = type(StatusBase.from_name(obj.name, obj.message))
-
-    class _MyClass(_EntityStatus, statusbase_subclass):
-        # Custom type inheriting from a specific StatusBase subclass to support instance checks:
-        #  isinstance(state.unit_status, ops.ActiveStatus)
-        pass
-
-    return _MyClass(cast(_RawStatusLiteral, obj.name), obj.message)
-
-
-@dataclasses.dataclass(frozen=True)
 class StoredState:
     # /-separated Object names. E.g. MyCharm/MyCharmLib.
     # if None, this StoredState instance is owned by the Framework.
@@ -761,22 +724,12 @@ class State:
     """Contents of a charm's stored state."""
 
     # the current statuses. Will be cast to _EntitiyStatus in __post_init__
-    app_status: Union[StatusBase, _EntityStatus] = _EntityStatus("unknown")
+    app_status: StatusBase = dataclasses.field(default_factory=lambda: UnknownStatus())
     """Status of the application."""
-    unit_status: Union[StatusBase, _EntityStatus] = _EntityStatus("unknown")
+    unit_status: StatusBase = dataclasses.field(default_factory=lambda: UnknownStatus())
     """Status of the unit."""
     workload_version: str = ""
     """Workload version."""
-
-    def __post_init__(self):
-        for name in ["app_status", "unit_status"]:
-            val = getattr(self, name)
-            if isinstance(val, _EntityStatus):
-                pass
-            elif isinstance(val, StatusBase):
-                object.__setattr__(self, name, _status_to_entitystatus(val))
-            else:
-                raise TypeError(f"Invalid status.{name}: {val!r}")
 
     def _update_workload_version(self, new_workload_version: str):
         """Update the current app version and record the previous one."""
@@ -788,14 +741,13 @@ class State:
 
     def _update_status(
         self,
-        new_status: _RawStatusLiteral,
-        new_message: str = "",
+        new_status: StatusBase,
         is_app: bool = False,
     ):
         """Update the current app/unit status and add the previous one to the history."""
         name = "app_status" if is_app else "unit_status"
         # bypass frozen dataclass
-        object.__setattr__(self, name, _EntityStatus(new_status, new_message))
+        object.__setattr__(self, name, new_status)
 
     def with_can_connect(self, container_name: str, can_connect: bool) -> "State":
         def replacer(container: Container):
@@ -810,13 +762,7 @@ class State:
         return dataclasses.replace(self, leader=leader)
 
     def with_unit_status(self, status: StatusBase) -> "State":
-        return dataclasses.replace(
-            self,
-            status=dataclasses.replace(
-                cast(_EntityStatus, self.unit_status),
-                unit=_status_to_entitystatus(status),
-            ),
-        )
+        return dataclasses.replace(self, unit_status=status)
 
     def get_container(self, container: Union[str, Container]) -> Container:
         """Get container from this State, based on an input container or its name."""

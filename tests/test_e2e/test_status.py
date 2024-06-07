@@ -11,7 +11,7 @@ from ops.model import (
 )
 
 from scenario import Context
-from scenario.state import State, _status_to_entitystatus
+from scenario.state import State
 from tests.helpers import trigger
 
 
@@ -146,12 +146,23 @@ def test_workload_history(mycharm):
         WaitingStatus("bar"),
         BlockedStatus("baz"),
         MaintenanceStatus("qux"),
-        ErrorStatus("fiz"),
-        UnknownStatus(),
     ),
 )
-def test_status_comparison(status):
-    entitystatus = _status_to_entitystatus(status)
-    assert entitystatus == entitystatus == status
-    assert isinstance(entitystatus, type(status))
-    assert repr(entitystatus) == repr(status)
+def test_set_status(status, mycharm):
+    class StatusCharm(mycharm):
+        def __init__(self, framework):
+            super().__init__(framework)
+            framework.observe(self.on.update_status, self._on_update_status)
+
+        def _on_update_status(self, _):
+            self.unit.status = status
+            self.app.status = status
+
+    ctx = Context(
+        StatusCharm,
+        meta={"name": "local"},
+    )
+
+    out = ctx.run(ctx.on.update_status(), State(leader=True))
+    assert out.unit_status == status
+    assert out.app_status == status

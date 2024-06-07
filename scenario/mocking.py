@@ -20,7 +20,7 @@ from typing import (
     cast,
 )
 
-from ops import JujuVersion, pebble
+from ops import JujuVersion, StatusBase, pebble
 from ops.model import ModelError, RelationNotFoundError
 from ops.model import Secret as Secret_Ops  # lol
 from ops.model import (
@@ -324,7 +324,7 @@ class _MockModelBackend(_ModelBackend):
         is_app: bool = False,
     ):
         self._context._record_status(self._state, is_app)
-        self._state._update_status(status, message, is_app)
+        self._state._update_status(StatusBase.from_name(status, message), is_app)
 
     def juju_log(self, level: str, message: str):
         self._context.juju_log.append(JujuLogLine(level, message))
