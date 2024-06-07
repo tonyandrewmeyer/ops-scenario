@@ -208,12 +208,19 @@ def normalize_name(s: str):
 @dataclasses.dataclass(frozen=True)
 class Address:
     value: str
-    hostname: str
-    cidr: str
+    hostname: str = ""
+    cidr: str = ""
     address: str = ""  # legacy
 
     # NOTE: This can be replaced with dataclasses.KW_ONLY in Python 3.10+
-    def __init__(self, value: str, *, hostname: str, cidr: str, address: str = ""):
+    def __init__(
+        self,
+        value: str,
+        *,
+        hostname: str = "",
+        cidr: str = "",
+        address: str = "",
+    ):
         object.__setattr__(self, "value", value)
         object.__setattr__(self, "hostname", hostname)
         object.__setattr__(self, "cidr", cidr)
