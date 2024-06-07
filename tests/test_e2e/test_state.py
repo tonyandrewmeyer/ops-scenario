@@ -242,10 +242,20 @@ def test_relation_set(mycharm):
     assert out.relations[0].local_unit_data == {"c": "d", **DEFAULT_JUJU_DATABAG}
 
 
-@pytest.mark.parametrize("klass", (State, Address, BindAddress, Network, Port))
-def test_no_positional_arguments(klass):
-    with pytest.raises(TypeError):
-        klass(None)
+@pytest.mark.parametrize(
+    "klass,num_args",
+    [
+        (State, (1,)),
+        (Address, (0, 2)),
+        (BindAddress, (0, 2)),
+        (Network, (0, 2)),
+    ],
+)
+def test_positional_arguments(klass, num_args):
+    for num in num_args:
+        args = (None,) * num
+        with pytest.raises(TypeError):
+            klass(*args)
 
 
 def test_model_positional_arguments():
