@@ -741,7 +741,7 @@ ctx.run(ctx.on.start(), scenario.State(opened_ports=[scenario.Port(protocol="tcp
 ```python
 ctx = scenario.Context(PortCharm, meta=MyCharm.META)
 state1 = ctx.run(ctx.on.start(), scenario.State())
-assert state1.opened_ports == [scenario.Port(protocol="tcp", port=42)]
+assert state1.opened_ports == [scenario.Port(port=42)]
 
 state2 = ctx.run(ctx.on.stop(), state1)
 assert state2.opened_ports == []
