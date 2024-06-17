@@ -5,7 +5,7 @@ import dataclasses
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, Type, Union, cast
 
 from ops import CharmBase, EventBase
 
@@ -19,6 +19,7 @@ from scenario.state import (
     Storage,
     _CharmSpec,
     _Event,
+    _MaxPositionalArgs,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -34,8 +35,8 @@ logger = scenario_logger.getChild("runtime")
 DEFAULT_JUJU_VERSION = "3.4"
 
 
-@dataclasses.dataclass
-class ActionOutput:
+@dataclasses.dataclass(frozen=True)
+class ActionOutput(_MaxPositionalArgs):
     """Wraps the results of running an action event with `run_action`."""
 
     state: "State"
@@ -49,19 +50,7 @@ class ActionOutput:
     failure: Optional[str] = None
     """If the action is not a success: the message the charm set when failing the action."""
 
-    # NOTE: This can be replaced with dataclass(kw_only=True) in Python 3.10+
-    def __init__(
-        self,
-        *,
-        state: "State",
-        logs: List[str],
-        results: Optional[Dict[str, Any]] = None,
-        failure: Optional[str] = None,
-    ):
-        object.__setattr__(self, "state", state)
-        object.__setattr__(self, "logs", logs)
-        object.__setattr__(self, "results", results)
-        object.__setattr__(self, "failure", failure)
+    _max_positional_args: Final = 0
 
     @property
     def success(self) -> bool:
@@ -330,6 +319,7 @@ class Context:
         self,
         charm_type: Type["CharmType"],
         meta: Optional[Dict[str, Any]] = None,
+        *,
         actions: Optional[Dict[str, Any]] = None,
         config: Optional[Dict[str, Any]] = None,
         charm_root: Optional["PathLike"] = None,

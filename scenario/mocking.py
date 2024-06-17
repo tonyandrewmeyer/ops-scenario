@@ -657,7 +657,7 @@ class _MockPebbleClient(_TestingPebbleClient):
             path = Path(mount.location).parts
             mounting_dir = container_root.joinpath(*path[1:])
             mounting_dir.parent.mkdir(parents=True, exist_ok=True)
-            mounting_dir.symlink_to(mount.src)
+            mounting_dir.symlink_to(mount.source)
 
         self._root = container_root
 
