@@ -694,30 +694,78 @@ _RawPortProtocolLiteral = Literal["tcp", "udp", "icmp"]
 
 
 @dataclasses.dataclass(frozen=True)
-class Port(_MaxPositionalArgs):
+class _Port(_MaxPositionalArgs):
     """Represents a port on the charm host."""
 
-    protocol: _RawPortProtocolLiteral = "tcp"
     port: Optional[int] = None
     """The port to open. Required for TCP and UDP; not allowed for ICMP."""
+    protocol: _RawPortProtocolLiteral = "tcp"
+
+    _max_positional_args = 1
+
+    def __post_init__(self):
+        if type(self) is _Port:
+            raise RuntimeError(
+                "_Port cannot be instantiated directly; "
+                "please use TCPPort, UDPPort, or ICMPPort",
+            )
+
+
+@dataclasses.dataclass(frozen=True)
+class TCPPort(_Port):
+    """Represents a TCP port on the charm host."""
+
+    port: int
+    """The port to open."""
+    protocol: _RawPortProtocolLiteral = "tcp"
+
+    _max_positional_args: Final = 1
+
+    def __post_init__(self):
+        super().__post_init__()
+        if not (1 <= self.port <= 65535):
+            raise StateValidationError(
+                f"`port` outside bounds [1:65535], got {self.port}",
+            )
+
+
+@dataclasses.dataclass(frozen=True)
+class UDPPort(_Port):
+    """Represents a UDP port on the charm host."""
+
+    port: int
+    """The port to open."""
+    protocol: _RawPortProtocolLiteral = "udp"
+
+    _max_positional_args: Final = 1
+
+    def __post_init__(self):
+        super().__post_init__()
+        if not (1 <= self.port <= 65535):
+            raise StateValidationError(
+                f"`port` outside bounds [1:65535], got {self.port}",
+            )
+
+
+@dataclasses.dataclass(frozen=True)
+class ICMPPort(_Port):
+    """Represents an ICMP port on the charm host."""
+
+    protocol: _RawPortProtocolLiteral = "icmp"
 
     _max_positional_args: Final = 0
 
     def __post_init__(self):
-        is_icmp = self.protocol == "icmp"
-        if self.port:
-            if is_icmp:
-                raise StateValidationError(
-                    "`port` arg not supported with `icmp` protocol",
-                )
-            if not (1 <= self.port <= 65535):
-                raise StateValidationError(
-                    f"`port` outside bounds [1:65535], got {self.port}",
-                )
-        elif not is_icmp:
-            raise StateValidationError(
-                f"`port` arg required with `{self.protocol}` protocol",
-            )
+        super().__post_init__()
+        if self.port is not None:
+            raise StateValidationError("`port` cannot be set for `ICMPPort`")
+
+
+_port_cls_by_protocol = {
+    "tcp": TCPPort,
+    "udp": UDPPort,
+    "icmp": ICMPPort,
+}
 
 
 _next_storage_index_counter = 0  # storage indices start at 0
@@ -782,7 +830,7 @@ class State(_MaxPositionalArgs):
     If a storage is not attached, omit it from this listing."""
 
     # we don't use sets to make json serialization easier
-    opened_ports: List[Port] = dataclasses.field(default_factory=list)
+    opened_ports: List[_Port] = dataclasses.field(default_factory=list)
     """Ports opened by juju on this charm."""
     leader: bool = False
     """Whether this charm has leadership."""

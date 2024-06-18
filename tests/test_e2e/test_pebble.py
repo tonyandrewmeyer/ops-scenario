@@ -9,7 +9,7 @@ from ops.framework import Framework
 from ops.pebble import ExecError, ServiceStartup, ServiceStatus
 
 from scenario import Context
-from scenario.state import Container, ExecOutput, Mount, Port, State
+from scenario.state import Container, ExecOutput, Mount, State
 from tests.helpers import jsonpatch_delta, trigger
 
 
@@ -94,10 +94,6 @@ def test_fs_push(charm_cls):
         event="start",
         post_event=callback,
     )
-
-
-def test_port_equality():
-    assert Port(protocol="tcp", port=42) == Port(protocol="tcp", port=42)
 
 
 @pytest.mark.parametrize("make_dirs", (True, False))
