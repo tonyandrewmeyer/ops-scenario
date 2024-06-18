@@ -13,7 +13,6 @@ from scenario.state import (
     Container,
     Model,
     Network,
-    Port,
     Relation,
     State,
 )
