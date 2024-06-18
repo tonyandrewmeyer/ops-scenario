@@ -311,6 +311,12 @@ class _RelationBase(_MaxPositionalArgs):
 
     _max_positional_args: Final = 2
 
+    @property
+    def _databags(self):
+        """Yield all databags in this relation."""
+        yield self.local_app_data
+        yield self.local_unit_data
+
     def __post_init__(self):
         if type(self) is _RelationBase:
             raise RuntimeError(
@@ -320,12 +326,6 @@ class _RelationBase(_MaxPositionalArgs):
 
         for databag in self._databags:
             self._validate_databag(databag)
-
-    @property
-    def _databags(self):
-        """Yield all databags in this relation."""
-        yield self.local_app_data
-        yield self.local_unit_data
 
     @property
     def _remote_unit_ids(self) -> Tuple["UnitID", ...]:
