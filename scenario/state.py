@@ -866,16 +866,14 @@ class State(_MaxPositionalArgs):
     _max_positional_args: Final = 0
 
     def __post_init__(self):
-        if isinstance(self.app_status, StatusBase):
-            app_status = _status_to_entitystatus(self.app_status)
-            object.__setattr__(self, "app_status", app_status)
-        elif not isinstance(self.app_status, _EntityStatus):
-            raise TypeError(f"Invalid status.app_status: {self.app_status!r}")
-        if isinstance(self.unit_status, StatusBase):
-            unit_status = _status_to_entitystatus(self.unit_status)
-            object.__setattr__(self, "unit_status", unit_status)
-        elif not isinstance(self.unit_status, _EntityStatus):
-            raise TypeError(f"Invalid status.app_status: {self.unit_status!r}")
+        for name in ["app_status", "unit_status"]:
+            val = getattr(self, name)
+            if isinstance(val, _EntityStatus):
+                pass
+            elif isinstance(val, StatusBase):
+                object.__setattr__(self, name, _status_to_entitystatus(val))
+            else:
+                raise TypeError(f"Invalid status.{name}: {val!r}")
 
     def _update_workload_version(self, new_workload_version: str):
         """Update the current app version and record the previous one."""
