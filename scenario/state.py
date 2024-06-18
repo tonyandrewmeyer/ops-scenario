@@ -317,16 +317,6 @@ class _RelationBase(_MaxPositionalArgs):
         yield self.local_app_data
         yield self.local_unit_data
 
-    def __post_init__(self):
-        if type(self) is _RelationBase:
-            raise RuntimeError(
-                "_RelationBase cannot be instantiated directly; "
-                "please use Relation, PeerRelation, or SubordinateRelation",
-            )
-
-        for databag in self._databags:
-            self._validate_databag(databag)
-
     @property
     def _remote_unit_ids(self) -> Tuple["UnitID", ...]:
         """Ids of the units on the other end of this relation."""
@@ -338,6 +328,16 @@ class _RelationBase(_MaxPositionalArgs):
     ) -> "RawDataBagContents":
         """Return the databag for some remote unit ID."""
         raise NotImplementedError()
+
+    def __post_init__(self):
+        if type(self) is _RelationBase:
+            raise RuntimeError(
+                "_RelationBase cannot be instantiated directly; "
+                "please use Relation, PeerRelation, or SubordinateRelation",
+            )
+
+        for databag in self._databags:
+            self._validate_databag(databag)
 
     def _validate_databag(self, databag: dict):
         if not isinstance(databag, dict):
