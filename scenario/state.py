@@ -14,10 +14,9 @@ from typing import (
     Any,
     Callable,
     Dict,
-    FrozenSet,
     Final,
+    FrozenSet,
     Generic,
-    Iterable,
     List,
     Literal,
     Optional,
@@ -218,7 +217,7 @@ class Address(_MaxPositionalArgs):
 
 @dataclasses.dataclass(frozen=True)
 class BindAddress(_MaxPositionalArgs):
-    addresses: List[Address]
+    addresses: Tuple[Address]
     interface_name: str = ""
     mac_address: Optional[str] = None
 
@@ -238,13 +237,19 @@ class BindAddress(_MaxPositionalArgs):
 
 @dataclasses.dataclass(frozen=True)
 class Network(_MaxPositionalArgs):
-    bind_addresses: FrozenSet[BindAddress] = dataclasses.field(default_factory=lambda: frozenset({BindAddress(Address(value="192.0.2.0"))})
-    ingress_addresses: FrozenSet[str] = dataclasses.field(default_factory=lambda: frozenset({"192.0.2.0"}))
+    bind_addresses: FrozenSet[BindAddress] = dataclasses.field(
+        default_factory=lambda: frozenset({BindAddress((Address(value="192.0.2.0"),))}),
+    )
+    ingress_addresses: FrozenSet[str] = dataclasses.field(
+        default_factory=lambda: frozenset({"192.0.2.0"}),
+    )
     """IP addresses that other units should use to get in touch with the charm.
 
     If not set, defaults to {"192.0.2.0"}.
     """
-    egress_subnets: FrozenSet[str] = dataclasses.field(default_factory=lambda: frozenset({"192.0.2.0/24"}))
+    egress_subnets: FrozenSet[str] = dataclasses.field(
+        default_factory=lambda: frozenset({"192.0.2.0/24"}),
+    )
     """Networks representing the subnets that other units will see the charm connecting from.
 
     If not set, defaults to {"192.0.2.0/24"}.

@@ -247,7 +247,7 @@ def test_relation_set(mycharm):
         (State, (1,)),
         (Address, (0, 2)),
         (BindAddress, (0, 2)),
-        (Network, (0, 2)),
+        (Network, (1,)),
     ],
 )
 def test_positional_arguments(klass, num_args):
