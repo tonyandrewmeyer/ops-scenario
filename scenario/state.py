@@ -15,6 +15,7 @@ from typing import (
     Callable,
     Dict,
     Final,
+    FrozenSet,
     Generic,
     List,
     Literal,
@@ -216,7 +217,7 @@ class Address(_MaxPositionalArgs):
 
 @dataclasses.dataclass(frozen=True)
 class BindAddress(_MaxPositionalArgs):
-    addresses: List[Address]
+    addresses: Tuple[Address]
     interface_name: str = ""
     mac_address: Optional[str] = None
 
@@ -236,45 +237,34 @@ class BindAddress(_MaxPositionalArgs):
 
 @dataclasses.dataclass(frozen=True)
 class Network(_MaxPositionalArgs):
-    bind_addresses: List[BindAddress]
-    ingress_addresses: List[str]
-    egress_subnets: List[str]
+    bind_addresses: FrozenSet[BindAddress] = dataclasses.field(
+        default_factory=lambda: frozenset({BindAddress((Address(value="192.0.2.0"),))}),
+    )
+    ingress_addresses: FrozenSet[str] = dataclasses.field(
+        default_factory=lambda: frozenset({"192.0.2.0"}),
+    )
+    """IP addresses that other units should use to get in touch with the charm.
+
+    If not set, defaults to {"192.0.2.0"}.
+    """
+    egress_subnets: FrozenSet[str] = dataclasses.field(
+        default_factory=lambda: frozenset({"192.0.2.0/24"}),
+    )
+    """Networks representing the subnets that other units will see the charm connecting from.
+
+    If not set, defaults to {"192.0.2.0/24"}.
+    """
 
     _max_positional_args: Final = 0
 
     def hook_tool_output_fmt(self):
         # dumps itself to dict in the same format the hook tool would
+        assert self.bind_addresses is not None
         return {
             "bind-addresses": [ba.hook_tool_output_fmt() for ba in self.bind_addresses],
             "egress-subnets": self.egress_subnets,
             "ingress-addresses": self.ingress_addresses,
         }
-
-    @classmethod
-    def default(
-        cls,
-        private_address: str = "192.0.2.0",
-        hostname: str = "",
-        cidr: str = "",
-        interface_name: str = "",
-        mac_address: Optional[str] = None,
-        egress_subnets=("192.0.2.0/24",),
-        ingress_addresses=("192.0.2.0",),
-    ) -> "Network":
-        """Helper to create a minimal, heavily defaulted Network."""
-        return cls(
-            bind_addresses=[
-                BindAddress(
-                    interface_name=interface_name,
-                    mac_address=mac_address,
-                    addresses=[
-                        Address(hostname=hostname, value=private_address, cidr=cidr),
-                    ],
-                ),
-            ],
-            egress_subnets=list(egress_subnets),
-            ingress_addresses=list(ingress_addresses),
-        )
 
 
 _next_relation_id_counter = 1
