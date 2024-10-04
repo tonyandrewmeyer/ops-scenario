@@ -1981,10 +1981,10 @@ class _Event:
             # Enforced by the consistency checker, but for type checkers:
             assert self.secret is not None
             snapshot_data.update(
-                {"secret_id": self.secret.id, "secret_label": self.secret.label},
+                {"id": self.secret.id, "label": self.secret.label},
             )
             if self.name.endswith(("_remove", "_expired")):
-                snapshot_data["secret_revision"] = self.secret_revision
+                snapshot_data["revision"] = self.secret_revision
 
         elif self._is_action_event:
             # Enforced by the consistency checker, but for type checkers:
